@@ -1,53 +1,90 @@
 package com.ibm.app;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Scanner;
 
 public class App {
 
     // java -cp target/entity-generator-app-1.0-SNAPSHOT.jar com.ibm.app.App
     public static void main(String[] args) throws IOException {
-        if (args.length < 1) {
-            System.out.println("please use command \njava Generator <output file>");
-        } else if (args.length == 1) {
-            String ans = "";
-            String[] properties = new String[2];
-            // https://www.browserling.com/tools/newlines-to-spaces
-            String csv = new FileInputStream(new File(args[0]))
-            String lines[] = csv.split("\\r?\\n");
-            String columns = "RUNNING_NO FC_CODE ATM_PLACE ATM_ADDRESS ATM_ADDRESS_2 ATM_SUB_DISTRICT ATM_DISTRICT ATM_PROVINCE ATM_POST_CODE ATM_OPEN_DATE ATM_OPEN_TIME ATM_CREATE_DATE ATM_INSTALLATION_DATE CASH_TOPUP_CENTER OWN_BR_CODE PROVINCE_OF_OWN_BR CLEARING_BR_NAME CODE_OF_CLEARING_BR IN_OUT LO REGION AREA LO_N REG NEW_REG BRANCH_CODE ATM_TYPE FLAG_U DRIVE_2_WALK_UP CAMERA ANTI_SKIM UPS_BOX TCS_PLUS_OS2 TTW_LOBBY BARCODE_READER UPS MACHINE_STRUCTURE GROUP_OF_MACHINE CLOSE_DATE CODE SUB_CODE GROUP_OF_CODE NEW_CODE NEW_SUB_CODE NEW_ATM_CODE REMARK TYPE_OLD SERIAL_OLD SERIAL_NO OUTSOURCE ATM_CODE_OLD IP SNA CONNECTION USE_OS VENDER SPEED LOCATION DES_3 EPP EPP_TYPE STREET_ADDRESS_1 STREET_ADDRESS_2 STATE_PROV ATM_MANUFACTURER TYPE_OF_ATM STATUS START_DATE FINISH MARKET_GROUP CODE_SEGMENT SEGMENTATION CONTACT_NAME TELEPHONE EMAIL CCTV_PROJECT HARDWARE_NUMBER FIRMWARE_NUMBER LATITUDE LONGITUDE ORIGIN_FC_CODE"
-                    .toLowerCase();
-            String[] columnsList = columns.split(" ");
-            for (String phrase : columnsList) {
-                // @Column(name = "REF_ID", nullable = false, length = 36)
-                ans = ans + "@Column(name = \"" + phrase.toUpperCase() + "\", nullable = true, length = 10)\n";
-                while (phrase.contains("_")) {
-                    phrase = phrase.replaceFirst("_[a-z0-9]",
-                            String.valueOf(Character.toUpperCase(phrase.charAt(phrase.indexOf("_") + 1))));
-                }
-                // private String refId;
-                ans = ans + "private String " + phrase + ";\n\n";
+        // javac Generator.java && java Generator ATM_LOCATION.csv output.java
+        // jar -cf Generator.jar Generator.class
+        // java -jar Generator.jar ATM_LOCATION.csv AtmLocation.java
+        if (args.length != 2) {
+            System.out.println(
+                    "*****please use command***** \n java -jar Generator.jar <input file.csv> <output.java> \n****************************");
+        } else {
+            String ans = "import javax.persistence.Column;\n" + "import javax.persistence.Entity;\n"
+                    + "import javax.persistence.Id;\n" + "import javax.persistence.Table;\n"
+                    + "import java.time.LocalDateTime;\n" + "@Entity\n" + "@Table(name = \"" + removeFileType(args[0])
+                    + "\")\n" + "public class " + removeFileType(args[1]) + " {\n" + "\n";
+            String getSet = "";
+            Map<String, String[]> apiList = new LinkedHashMap<String, String[]>();
+            File file = new File(args[0]);
+            Scanner sc = new Scanner(file);
+
+            while (sc.hasNextLine()) {
+                String line = sc.nextLine();
+                String[] words = line.split(",");
+                apiList.put(words[0].toLowerCase(), words);
             }
-            // System.out.print(ans);
-            FileWriter writer = new FileWriter(args[0]);
+            sc.close();
+            // the fields part
+            for (String phrase : apiList.keySet()) {
+                ans = ans + "\t@Column(name = \"" + phrase.toUpperCase() + "\" , " + nullable(apiList.get(phrase)[1])
+                        + "length = " + apiList.get(phrase)[3] + ")\n";
+                String fieldName = changeToCamel(phrase);
+                ans = ans + "\tprivate " + getDataType(apiList.get(phrase)[2]) + " " + fieldName + ";\n\n";
+                getSet = getSet + "\tpublic String get" + changeToPascal(fieldName) + "() {\n" + "\t\treturn "
+                        + fieldName + ";\n" + "\t\t}\n" + "\tpublic void set" + changeToPascal(fieldName) + "(String "
+                        + fieldName + ") {\n" + "\t\tthis." + fieldName + " = " + fieldName + ";\n" + "\t\t}\n";
+            }
+            ans = ans + getSet + "}";
+            FileWriter writer = new FileWriter(args[1]);
             writer.write(ans);
             writer.close();
-            System.out.println("Generated model into the file " + args[0]);
-        } else if (args.length == 2) {
-            // FileInputStream excelFile = new FileInputStream(new File(args[0]));
-            // XSSFWorkbook workbook = new XSSFWorkbook(excelFile);
-            // log.debug("This excel contain " + workbook.getNumberOfSheets() + "sheet(s)");
-            //Sheet firstSheet = workbook.getSheetAt(0);
-            // log.debug("First sheet is " + firstSheet.getSheetName());
-            Row firstRow = firstSheet.getRow(0);
-            // EndpointProcessor endpointProcessor = new EndpointProcessor(firstRow);
-            // endpointProcessor.setOperationTag(firstSheet.getSheetName());
+            System.out.println("Generated model into the file " + args[1]);
         }
+
+    }
+
+    private static String changeToCamel(String phrase) {
+        // String tem = phrase;
+        while (phrase.contains("_")) {
+            phrase = phrase.replaceFirst("_[a-z0-9]",
+                    String.valueOf(Character.toUpperCase(phrase.charAt(phrase.indexOf("_") + 1))));
+        }
+        return phrase;
+    }
+
+    private static String removeFileType(String phrase) {
+        String[] temp = phrase.split("\\.");
+        return temp[0];
+    }
+
+    private static String changeToPascal(String temp) {
+        temp = temp.substring(0, 1).toUpperCase() + temp.substring(1);
+        return temp;
+    }
+
+    private static String nullable(String yn) {
+        if ("N".equals(yn)) {
+            return "nullable = false ,";
+        } else {
+            return "";
+        }
+    }
+
+    private static String getDataType(String dataType) {
+        if ("VARCHAR".equals(dataType)) {
+            return "String";
+        } else {
+            return "String";
+        }
+        // to be implement other datatype
     }
 }
