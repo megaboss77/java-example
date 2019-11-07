@@ -1,4 +1,3 @@
-name,is nullable,data type,length
 RUNNING_NO,Y,VARCHAR,30
 FC_CODE,Y,VARCHAR,50
 ATM_PLACE,Y,VARCHAR,50

@@ -9,14 +9,16 @@ public class Generator {
 
     public static void main(String[] args) throws IOException {
         // javac Generator.java && java Generator ATM_LOCATION.csv output.java
+        // jar -cf Generator.jar Generator.class
+        // java -jar Generator.jar ATM_LOCATION.csv AtmLocation.java
         if (args.length != 2) {
             System.out.println("please use command \njava Generator <input file csv> <output.java>");
         } else {
             String ans = "import javax.persistence.Column;\n" + "import javax.persistence.Entity;\n"
                     + "import javax.persistence.Id;\n" + "import javax.persistence.Table;\n"
-                    + "import java.time.LocalDateTime;\n" + "@Entity\n"
-                    + "@Table(name = \"FAST_EASY_PAYMENT_TRANSACTIONS\")\n"
-                    + "public class FastEasyPaymentTransaction {\n" + "\n";
+                    + "import java.time.LocalDateTime;\n" + "@Entity\n" + "@Table(name = \"" + removeFileType(args[0])
+                    + "\")\n" + "public class " + removeFileType(args[1]) + " {\n" + "\n";
+            String getSet = "";
             Map<String, String[]> apiList = new LinkedHashMap<String, String[]>();
             File file = new File(args[0]);
             Scanner sc = new Scanner(file);
@@ -27,13 +29,17 @@ public class Generator {
                 apiList.put(words[0].toLowerCase(), words);
             }
             sc.close();
+            // the fields part
             for (String phrase : apiList.keySet()) {
-                ans = ans + "@Column(name = \"" + phrase.toUpperCase() + "\" , " + nullable(apiList.get(phrase)[1])
-                        + "length =" + apiList.get(phrase)[3] + ")\n";
+                ans = ans + "\t@Column(name = \"" + phrase.toUpperCase() + "\" , " + nullable(apiList.get(phrase)[1])
+                        + "length = " + apiList.get(phrase)[3] + ")\n";
                 String fieldName = changeToCamel(phrase);
-                ans = ans + "private " + getDataType(apiList.get(phrase)[2]) + " " + fieldName + ";\n\n";
+                ans = ans + "\tprivate " + getDataType(apiList.get(phrase)[2]) + " " + fieldName + ";\n\n";
+                getSet = getSet + "\tpublic String get" + changeToPascal(fieldName) + "() {\n" + "\t\treturn "
+                        + fieldName + ";\n" + "\t\t}\n" + "\tpublic void set" + changeToPascal(fieldName) + "(String "
+                        + fieldName + ") {\n" + "\t\tthis." + fieldName + " = " + fieldName + ";\n" + "\t\t}\n";
             }
-            ans = ans + "}";
+            ans = ans + getSet + "}";
             FileWriter writer = new FileWriter(args[1]);
             writer.write(ans);
             writer.close();
@@ -49,6 +55,16 @@ public class Generator {
                     String.valueOf(Character.toUpperCase(phrase.charAt(phrase.indexOf("_") + 1))));
         }
         return phrase;
+    }
+
+    private static String removeFileType(String phrase) {
+        String[] temp = phrase.split("\\.");
+        return temp[0];
+    }
+
+    private static String changeToPascal(String temp) {
+        temp = temp.substring(0, 1).toUpperCase() + temp.substring(1);
+        return temp;
     }
 
     private static String nullable(String yn) {
