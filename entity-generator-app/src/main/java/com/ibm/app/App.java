@@ -15,8 +15,9 @@ public class App {
         // jar -cf Generator.jar Generator.class
         // java -jar Generator.jar ATM_LOCATION.csv AtmLocation.java
         if (args.length != 2) {
-            System.out.println(
-                    "*****please use command***** \n java -jar Generator.jar <input file.csv> <output.java> \n****************************");
+            System.out.println("********* please use command ********* \n"
+                    + "java -jar entity-generator-app-1.0-SNAPSHOT.jar  <input file.csv> <output.java> \n"
+                    + "**************************************");
         } else {
             String ans = "import javax.persistence.Column;\n" + "import javax.persistence.Entity;\n"
                     + "import javax.persistence.Id;\n" + "import javax.persistence.Table;\n"
